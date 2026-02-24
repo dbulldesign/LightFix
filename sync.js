@@ -1,4 +1,4 @@
-const API_URL="PASTE_YOUR_WEB_APP_URL";
+const API_URL=https://script.google.com/macros/s/AKfycbxzDks6rG9zfseFRjfbN75Php-xg-YKKgIEFUFIBBkMNKZ0U-dRZ0Czl_9mDZzbHb3Z/exec;
 
 async function sync(){
   const localIssues=await getAllIssues();
