@@ -1,0 +1,9 @@
+{
+  "name": "LightFix Enterprise",
+  "short_name": "LightFix",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0c0e14",
+  "theme_color": "#0c0e14",
+  "icons": []
+}
