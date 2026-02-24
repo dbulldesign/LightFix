@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>LightFix DB</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0e14;--surface:#14161e;--surface2:#1a1c26;
+  --border:#1e2030;--border2:#252730;
+  --accent:#f0c040;--accent-dim:#1e1a08;
+  --text:#e0e0e0;--text-mid:#aaa;--text-dim:#666;
+  --green:#3a3;--red:#c06060;--hbg:#090b10;
+}
+body.light{
+  --bg:#f4f5f8;--surface:#fff;--surface2:#eef0f5;
+  --border:#dde0ea;--border2:#cdd0dc;
+  --accent:#b8920a;--accent-dim:#fdf4d0;
+  --text:#1a1c26;--text-mid:#555;--text-dim:#888;
+  --green:#2a7a2a;--red:#c03030;--hbg:#fff;
+}
+body{background:var(--bg);color:var(--text);font-family:Georgia,'Times New Roman',serif;min-height:100vh;transition:background .2s,color .2s}
+a{color:#6ab0f5} body.light a{color:#1a6abf}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--hbg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+#logo-btn{background:none;border:none;cursor:pointer;font-family:Georgia,serif;font-size:19px;font-weight:bold;color:var(--accent)}
+.hright{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#sync-badge{font-size:12px;color:#888;background:var(--surface2);padding:4px 10px;border-radius:12px;display:none}
+#no-sheet-badge{font-size:12px;color:var(--red);background:var(--surface);border:1px solid var(--border2);padding:4px 10px;border-radius:12px;cursor:pointer;display:none}
+
+/* BUTTONS */
+.btn-primary{background:var(--accent);color:#0c0e14;border:none;padding:9px 18px;border-radius:6px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;font-size:14px}
+.btn-secondary{background:transparent;color:var(--text-mid);border:1px solid var(--border2);padding:9px 18px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;font-size:14px}
+.btn-ghost{background:none;border:none;cursor:pointer;font-size:18px;color:#888;padding:6px 8px;line-height:1}
+.btn-icon{background:none;border:1px solid var(--border2);color:var(--text-dim);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:14px;line-height:1}
+.btn-icon:hover{border-color:var(--accent);color:var(--accent)}
+.btn-back{background:none;border:none;color:var(--accent);cursor:pointer;font-family:Georgia,serif;font-size:13px;margin-bottom:18px;padding:0}
+.btn-edit-entry{background:var(--surface2);border:1px solid var(--border2);color:var(--accent);padding:7px 13px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;font-size:13px}
+.btn-del-entry{background:var(--surface);border:1px solid var(--red);color:var(--red);padding:7px 11px;border-radius:6px;cursor:pointer;font-size:13px}
+.btn-print{background:var(--surface2);border:1px solid var(--border2);color:var(--text-mid);padding:7px 11px;border-radius:6px;cursor:pointer;font-size:13px}
+.btn-add-step{background:none;border:1px dashed var(--border2);color:var(--text-dim);padding:7px 14px;border-radius:6px;cursor:pointer;font-family:Georgia,serif;font-size:13px;align-self:flex-start;margin-top:4px}
+.btn-inline{background:none;border:none;color:var(--accent);cursor:pointer;text-decoration:underline;font-family:Georgia,serif;font-size:inherit}
+.btn-connect{background:var(--accent);color:#0c0e14;border:none;padding:11px 20px;border-radius:7px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;white-space:nowrap}
+.btn-nav-tab{background:none;border:none;color:var(--text-mid);padding:8px 16px;cursor:pointer;font-family:Georgia,serif;font-size:14px;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.btn-nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.btn-db-tab{background:none;border:none;color:var(--text-dim);padding:7px 14px;cursor:pointer;font-family:Georgia,serif;font-size:13px;border-bottom:2px solid transparent;white-space:nowrap}
+.btn-db-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.btn-sm{background:none;border:1px solid var(--border2);color:var(--text-dim);padding:3px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Georgia,serif}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm.danger:hover{border-color:var(--red);color:var(--red)}
+
+/* LAYOUT */
+main{max-width:960px;margin:0 auto;padding:20px 14px}
+.view{display:none}.view.active{display:block}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal-card{background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:32px 28px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;position:relative}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer}
+.modal-title{font-size:20px;color:var(--accent);margin-bottom:6px}
+.modal-sub{color:var(--text-dim);font-size:13px;margin-bottom:20px}
+.conn-row{display:flex;align-items:center;gap:8px;background:#0e1f10;border:1px solid #2a4a2a;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:13px;color:#6c6}
+.setup-steps{display:flex;flex-direction:column;gap:16px;margin-bottom:24px}
+.setup-step{display:flex;gap:14px;align-items:flex-start}
+.sn{width:24px;height:24px;background:var(--accent);color:#0c0e14;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;flex-shrink:0;margin-top:2px}
+.st{color:var(--text);font-weight:bold;font-size:14px}
+.sb{color:var(--text-dim);margin-top:3px;font-size:13px;line-height:1.5}
+.url-row{display:flex;gap:10px}
+#url-input{flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:11px 14px;border-radius:7px;font-size:13px;font-family:Georgia,serif;outline:none}
+
+/* COMBO */
+.combo-wrap{position:relative}
+.combo-sel{min-height:42px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:6px 36px 6px 10px;cursor:pointer;display:flex;flex-wrap:wrap;gap:5px;align-items:center;position:relative}
+.combo-sel:focus-within{border-color:var(--accent)}
+.combo-arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none;font-size:12px}
+.combo-tag{background:var(--accent-dim);border:1px solid var(--border2);color:var(--accent);font-size:12px;padding:2px 6px 2px 8px;border-radius:10px;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.combo-tag-x{background:none;border:none;color:var(--accent);cursor:pointer;font-size:14px;line-height:1;padding:0;opacity:.7}
+.combo-ph{color:var(--text-dim);font-size:14px}
+.combo-dd{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;z-index:200;max-height:260px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.combo-dd.open{display:block}
+.combo-srch{width:100%;background:var(--bg);border:none;border-bottom:1px solid var(--border2);color:var(--text);padding:10px 12px;font-size:13px;font-family:Georgia,serif;outline:none}
+.combo-list{max-height:180px;overflow-y:auto}
+.combo-item{padding:9px 12px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s}
+.combo-item:hover{background:var(--border)}
+.combo-item.sel{color:var(--accent)}
+.chk{width:14px;height:14px;border:1px solid var(--border2);border-radius:3px;display:inline-block;flex-shrink:0}
+.combo-item.sel .chk{background:var(--accent);border-color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:10px;color:#0c0e14}
+.combo-add-row{padding:8px 12px;border-top:1px solid var(--border2)}
+.combo-add-btn{background:none;border:1px dashed var(--border2);color:var(--text-dim);padding:5px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-family:Georgia,serif;width:100%;text-align:left}
+.combo-add-btn:hover{border-color:var(--accent);color:var(--accent)}
+.combo-empty{padding:12px;color:var(--text-dim);font-size:13px;text-align:center}
+
+/* HERO */
+.hero{text-align:center;padding:36px 16px 28px;border-bottom:1px solid var(--border)}
+.hero-title{font-size:clamp(20px,3.5vw,34px);color:var(--accent);margin-bottom:8px}
+.hero-sub{color:var(--text-dim);margin-bottom:22px;font-size:15px}
+.search-box{display:flex;max-width:580px;margin:0 auto;border:1px solid var(--border2);border-radius:8px;overflow:hidden}
+#search-input{flex:1;background:var(--surface);color:var(--text);border:none;padding:13px 16px;font-size:14px;font-family:Georgia,serif;outline:none}
+.btn-search{background:var(--accent);color:#0c0e14;border:none;padding:13px 24px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;font-size:14px}
+
+/* FILTER BAR */
+.filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 4px}
+.filter-bar select{background:var(--surface);border:1px solid var(--border2);color:var(--text-mid);padding:7px 10px;border-radius:6px;font-family:Georgia,serif;font-size:13px;cursor:pointer;outline:none}
+.filter-bar select:focus{border-color:var(--accent)}
+.filter-clear{background:none;border:none;color:var(--text-dim);font-size:12px;cursor:pointer;font-family:Georgia,serif;text-decoration:underline}
+.filter-clear:hover{color:var(--accent)}
+
+/* NAV TABS */
+.nav-tabs{display:flex;border-bottom:1px solid var(--border);margin-top:24px;gap:2px;overflow-x:auto}
+.section-title{font-size:15px;color:var(--text-mid);margin:18px 0 14px;font-weight:bold}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.grid.compact{grid-template-columns:1fr;gap:6px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;text-align:left;color:inherit;width:100%;font-family:Georgia,serif;transition:border-color .2s}
+.card:hover{border-color:var(--accent)}
+.card-issue{font-size:14px;font-weight:bold;color:var(--text);line-height:1.4;margin-bottom:8px}
+.card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.card-meta-item{font-size:11px;color:var(--text-dim)}
+.card-preview{font-size:12px;color:var(--text-dim);border-left:2px solid var(--border2);padding-left:8px;margin:6px 0;line-height:1.5}
+.card-footer{display:flex;justify-content:space-between;margin-top:10px;flex-wrap:wrap;gap:4px;align-items:center}
+.card-tag{font-size:11px;color:var(--accent);background:var(--accent-dim);padding:2px 8px;border-radius:10px}
+.card-tools{font-size:11px;color:var(--text-dim)}
+.card-cmt{font-size:11px;color:#6ab0f5;background:#0d1520;border:1px solid #1a2a40;padding:2px 7px;border-radius:10px}
+body.light .card-cmt{background:#ddeeff;border-color:#aaccee;color:#1a6abf}
+.grid.compact .card{border-radius:7px;padding:10px 14px;display:flex;align-items:center;gap:12px}
+.grid.compact .card-issue{margin-bottom:0;font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid.compact .card-meta,.grid.compact .card-preview{display:none}
+.grid.compact .card-footer{margin-top:0;flex-shrink:0}
+
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;background:var(--surface);border-radius:10px;border:1px dashed var(--border2);color:var(--text-dim)}
+.empty-icon{font-size:36px;display:block;margin-bottom:10px}
+
+/* FORM */
+.form-wrap{max-width:700px;margin:0 auto}
+.form-title{font-size:22px;color:var(--accent);margin-bottom:22px}
+.form{display:flex;flex-direction:column;gap:18px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:7px}
+label.lbl{font-size:12px;color:var(--text-dim);font-weight:bold;letter-spacing:.5px;text-transform:uppercase}
+input.inp{background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:10px 13px;border-radius:6px;font-size:14px;font-family:Georgia,serif;outline:none;width:100%}
+input.inp:focus{border-color:var(--accent)}
+/* Auto-expanding textarea */
+textarea.inp{background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:10px 13px;border-radius:6px;font-size:14px;font-family:Georgia,serif;outline:none;width:100%;resize:none;overflow:hidden;min-height:42px;line-height:1.5}
+textarea.inp:focus{border-color:var(--accent)}
+.step-row{display:flex;align-items:flex-start;gap:8px}
+.step-num{width:24px;height:24px;background:var(--accent);color:#0c0e14;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;flex-shrink:0;margin-top:8px}
+.step-inp{flex:1;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:8px 10px;border-radius:6px;font-size:14px;font-family:Georgia,serif;outline:none;resize:none;overflow:hidden;min-height:38px;line-height:1.5}
+.step-inp:focus{border-color:var(--accent)}
+.step-remove{background:none;border:1px solid var(--border2);color:var(--text-dim);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:11px;flex-shrink:0;margin-top:6px}
+#steps-container,#steps-container-edit{display:flex;flex-direction:column;gap:8px}
+.form-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:4px}
+
+/* DETAIL */
+.detail-wrap{max-width:720px;margin:0 auto}
+.detail-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 26px;margin-bottom:20px}
+.detail-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.detail-title{font-size:20px;color:var(--text);line-height:1.4;flex:1;margin-right:14px}
+.detail-btns{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.badge{background:var(--surface2);border:1px solid var(--border2);padding:3px 11px;border-radius:16px;font-size:12px;color:var(--text-mid)}
+.badge-tool{background:var(--accent-dim);border:1px solid var(--border2);color:var(--accent)}
+.detail-sec{margin-bottom:20px}
+.detail-sec-title{font-size:12px;color:var(--accent);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;font-weight:bold}
+.detail-text{color:var(--text-mid);font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.step-list{padding-left:18px}
+.step-list li{color:var(--text-mid);font-size:14px;line-height:1.7;margin-bottom:4px}
+/* FIX: links always wrap inside box */
+.links-list{display:flex;flex-direction:column;gap:6px}
+.links-list a{color:#6ab0f5;font-size:13px;word-break:break-all;overflow-wrap:anywhere;white-space:normal;display:block;line-height:1.5}
+body.light .links-list a{color:#1a6abf}
+.timestamps{color:var(--text-dim);font-size:12px;border-top:1px solid var(--border);padding-top:12px;margin-top:16px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.synced-label{color:var(--green)}
+
+/* COMMENTS */
+.comments-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:20px}
+.comments-title{font-size:14px;color:var(--accent);font-weight:bold;letter-spacing:.5px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.cmt-count{background:var(--surface2);color:var(--text-dim);font-size:11px;padding:2px 8px;border-radius:10px;font-weight:normal;letter-spacing:0;text-transform:none}
+.comments-list{display:flex;flex-direction:column;gap:14px;margin-bottom:20px}
+.comment-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.comment-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.comment-author{font-size:13px;font-weight:bold;color:var(--text)}
+.comment-time{font-size:11px;color:var(--text-dim)}
+.comment-body{font-size:14px;color:var(--text-mid);line-height:1.6;white-space:pre-wrap}
+.comment-delete{background:none;border:none;color:var(--border2);cursor:pointer;font-size:14px;transition:color .15s;padding:0 4px}
+.comment-delete:hover{color:var(--red)}
+.comment-form{display:flex;flex-direction:column;gap:10px}
+.comment-inputs{display:flex;gap:10px}
+.comment-author-inp{flex:0 0 160px;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:6px;font-size:13px;font-family:Georgia,serif;outline:none}
+.comment-text-inp{flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:9px 12px;border-radius:6px;font-size:13px;font-family:Georgia,serif;outline:none;resize:vertical;min-height:70px}
+.comment-submit{background:var(--accent);color:#0c0e14;border:none;padding:9px 18px;border-radius:6px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;font-size:13px;align-self:flex-end}
+.comments-empty{color:var(--text-dim);font-size:13px;text-align:center;padding:20px}
+
+/* DATABASE PANEL */
+.db-search-row{display:flex;gap:10px;margin:10px 0 16px}
+.db-search-inp{flex:1;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:6px;font-size:13px;font-family:Georgia,serif;outline:none}
+.db-search-inp:focus{border-color:var(--accent)}
+.db-tabs-bar{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:18px}
+.db-panel{display:none}.db-panel.active{display:block}
+.db-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-bottom:14px}
+.db-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px}
+.db-item-name{font-size:14px;color:var(--text);font-weight:bold;margin-bottom:4px}
+.db-item-addr{font-size:12px;color:var(--text-dim);margin-bottom:8px;word-break:break-word}
+.db-item-btns{display:flex;gap:6px;flex-wrap:wrap}
+.db-add-row{display:flex;gap:10px;margin-top:6px}
+.db-add-inp{flex:1;background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:9px 13px;border-radius:6px;font-size:13px;font-family:Georgia,serif;outline:none}
+.db-add-inp:focus{border-color:var(--accent)}
+.db-add-btn{background:var(--accent);color:#0c0e14;border:none;padding:9px 16px;border-radius:6px;font-weight:bold;cursor:pointer;font-family:Georgia,serif;font-size:13px;white-space:nowrap}
+
+/* MAP */
+.map-section{margin-top:26px;padding-top:20px;border-top:1px solid var(--border)}
+.map-hint{font-size:13px;color:var(--text-dim);margin-bottom:10px}
+.map-bar{display:flex;gap:8px;margin-bottom:8px}
+#map-selected-label{font-size:13px;color:var(--accent);margin-bottom:8px;min-height:18px;font-style:italic}
+.map-wrap{border:1px solid var(--border2);border-radius:8px;overflow:hidden;height:320px;background:var(--surface2)}
+#loc-map{width:100%;height:100%}
+
+/* TOAST / LOADING */
+#toast{position:fixed;bottom:22px;right:22px;color:#fff;padding:11px 18px;border-radius:8px;z-index:999;font-family:Georgia,serif;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.6);display:none;max-width:320px}
+#loading-screen{display:none;position:fixed;inset:0;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:200}
+.spinner{width:34px;height:34px;border:3px solid var(--border2);border-top:3px solid var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* KBD HINT */
+.kbd-hint{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:10px 18px;font-size:12px;color:var(--text-dim);z-index:500;display:none;gap:16px;flex-wrap:wrap;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.kbd-hint.visible{display:flex}
+.kbd-hint kbd{background:var(--surface);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-family:monospace;font-size:11px;color:var(--text-mid)}
+
+/* PRINT */
+@media print{
+  header,#toast,#loading-screen,.modal-overlay,.comments-card,.detail-btns,.btn-back,.nav-tabs,.filter-bar,.kbd-hint{display:none!important}
+  body{background:#fff;color:#000}
+  main{max-width:100%;padding:0}
+  .view{display:none!important}
+  #print-area{display:block!important}
+  .detail-card{background:#fff;border:1px solid #ccc;padding:20px}
+  .badge{background:#eee;color:#333;border-color:#ccc}
+  .step-list li,.detail-text{color:#222}
+  .links-list a{color:#000;word-break:break-all}
+}
+#print-area{display:none}
+@media(max-width:580px){
+  .two-col{grid-template-columns:1fr}
+  header{padding:12px 14px}
+  .modal-card{padding:22px 16px}
+  .comment-inputs{flex-direction:column}
+  .comment-author-inp{flex:none;width:100%}
+}
+</style>
+</head>
+<body>
+<div id="loading-screen"><div class="spinner"></div><p style="color:var(--accent)">Syncing…</p></div>
+<div id="toast"></div>
+<div id="print-area"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal-card">
+    <button class="modal-close" id="modal-close-btn">✕</button>
+    <h2 class="modal-title">⚙️ Google Sheets Connection</h2>
+    <p class="modal-sub">Connect a Google Sheet so entries sync across all devices for free.</p>
+    <div id="connected-row" class="conn-row" style="display:none">✓ Connected &nbsp;·&nbsp; <span style="color:var(--text-mid);word-break:break-all;font-size:12px" id="connected-url-text"></span></div>
+    <div class="setup-steps">
+      <div class="setup-step"><div class="sn">1</div><div><div class="st">Create a Google Sheet</div><div class="sb">Go to <a href="https://sheets.google.com" target="_blank">sheets.google.com</a> → New blank sheet.</div></div></div>
+      <div class="setup-step"><div class="sn">2</div><div><div class="st">Open Apps Script</div><div class="sb">Extensions → Apps Script. Delete any existing code.</div></div></div>
+      <div class="setup-step"><div class="sn">3</div><div><div class="st">Paste apps-script.js</div><div class="sb">Copy the apps-script.js file contents and save.</div></div></div>
+      <div class="setup-step"><div class="sn">4</div><div><div class="st">Deploy as Web App</div><div class="sb">Deploy → New deployment → Web app. Execute as Me, Access Anyone. Copy the URL.</div></div></div>
+      <div class="setup-step"><div class="sn">5</div><div><div class="st">Paste URL below</div></div></div>
+    </div>
+    <div class="url-row"><input id="url-input" type="url" placeholder="https://script.google.com/macros/s/…"/><button class="btn-connect" id="connect-btn">Connect</button></div>
+  </div>
+</div>
+
+<header>
+  <button id="logo-btn">⚡ LightFix DB</button>
+  <div class="hright">
+    <span id="sync-badge">↻ Syncing…</span>
+    <span id="no-sheet-badge">⚠️ Not connected</span>
+    <button class="btn-icon" id="refresh-btn" title="Refresh (R)">↻</button>
+    <button class="btn-ghost" id="theme-btn" title="Toggle theme (T)">🌙</button>
+    <button class="btn-icon" id="view-toggle-btn" title="Compact view (V)">☰</button>
+    <button class="btn-ghost" id="settings-btn" title="Settings">⚙️</button>
+    <button class="btn-primary" id="add-btn">+ Log Issue</button>
+  </div>
+</header>
+
+<main>
+<!-- HOME -->
+<div class="view active" id="view-home">
+  <div class="hero">
+    <h1 class="hero-title">Lighting Troubleshooting Database</h1>
+    <p class="hero-sub">Your team's collective knowledge, synced to Google Sheets.</p>
+    <div class="search-box">
+      <input id="search-input" type="text" placeholder="Search issues, steps, notes…"/>
+      <button class="btn-search" id="search-btn">Search</button>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="btn-nav-tab active" data-tab="issues">Issues</button>
+    <button class="btn-nav-tab" data-tab="databases">🗄️ Databases</button>
+  </div>
+
+  <!-- ISSUES TAB -->
+  <div id="tab-issues">
+    <div class="filter-bar">
+      <select id="sort-select">
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+        <option value="az">A → Z</option>
+        <option value="za">Z → A</option>
+        <option value="steps">Most steps</option>
+      </select>
+      <select id="filter-mfr"><option value="">All manufacturers</option></select>
+      <select id="filter-loc"><option value="">All locations</option></select>
+      <select id="filter-equip"><option value="">All equipment</option></select>
+      <button class="filter-clear" id="filter-clear-btn" style="display:none">✕ Clear filters</button>
+    </div>
+    <p class="section-title" id="list-title">All Issues</p>
+    <div id="entries-grid"></div>
+  </div>
+
+  <!-- DATABASES TAB -->
+  <div id="tab-databases" style="display:none">
+    <div class="db-search-row">
+      <input class="db-search-inp" id="db-search" placeholder="Search tools, equipment, manufacturers, locations…"/>
+    </div>
+    <div class="db-tabs-bar">
+      <button class="btn-db-tab active" data-db="tools">🔧 Tools</button>
+      <button class="btn-db-tab" data-db="equipment">⚙️ Equipment</button>
+      <button class="btn-db-tab" data-db="manufacturers">🏭 Manufacturers</button>
+      <button class="btn-db-tab" data-db="locations">📍 Locations</button>
+    </div>
+
+    <div class="db-panel active" id="dbpanel-tools">
+      <div class="db-grid" id="tools-db-grid"></div>
+      <div class="db-add-row">
+        <input class="db-add-inp" id="new-tool-input" placeholder="New tool name…"/>
+        <button class="db-add-btn" id="new-tool-btn">+ Add Tool</button>
+      </div>
+    </div>
+
+    <div class="db-panel" id="dbpanel-equipment">
+      <div class="db-grid" id="equip-db-grid"></div>
+      <div class="db-add-row">
+        <input class="db-add-inp" id="new-equip-input" placeholder="New fixture name…"/>
+        <button class="db-add-btn" id="new-equip-btn">+ Add Equipment</button>
+      </div>
+    </div>
+
+    <div class="db-panel" id="dbpanel-manufacturers">
+      <div class="db-grid" id="mfrs-db-grid"></div>
+      <div class="db-add-row">
+        <input class="db-add-inp" id="new-mfr-input" placeholder="New manufacturer name…"/>
+        <button class="db-add-btn" id="new-mfr-btn">+ Add Manufacturer</button>
+      </div>
+    </div>
+
+    <div class="db-panel" id="dbpanel-locations">
+      <div class="db-grid" id="locs-db-grid"></div>
+      <div class="db-add-row">
+        <input class="db-add-inp" id="new-loc-input" placeholder="New location name…"/>
+        <button class="db-add-btn" id="new-loc-btn">+ Add Location</button>
+      </div>
+      <div class="map-section">
+        <div class="detail-sec-title" style="margin-bottom:8px">📍 Location Map</div>
+        <p class="map-hint">Click <strong>🗺️ Map</strong> on a location card above, then search for its real-world address to pin it.</p>
+        <div class="map-bar">
+          <input class="db-add-inp" id="map-addr-input" placeholder="Search address for selected location…"/>
+          <button class="db-add-btn" id="map-search-btn">📍 Pin It</button>
+        </div>
+        <div id="map-selected-label"></div>
+        <div class="map-wrap"><div id="loc-map"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD -->
+<div class="view" id="view-add">
+  <div class="form-wrap">
+    <button class="btn-back" id="add-back-btn">← Back</button>
+    <h2 class="form-title">Log New Issue</h2>
+    <div class="form">
+      <div class="field"><label class="lbl">Issue / Problem *</label>
+        <textarea class="inp" id="add-issue" rows="2" placeholder="Describe the lighting issue…"></textarea></div>
+      <div class="two-col">
+        <div class="field"><label class="lbl">Location</label>
+          <div class="combo-wrap" id="add-loc-wrap">
+            <div class="combo-sel" id="add-loc-sel" tabindex="0"><span class="combo-ph" id="add-loc-ph">Select location…</span><span class="combo-arrow">▾</span></div>
+            <div class="combo-dd" id="add-loc-dd"><input class="combo-srch" id="add-loc-srch" placeholder="Search…"/><div class="combo-list" id="add-loc-list"></div><div class="combo-add-row"><button class="combo-add-btn" id="add-loc-add">+ Add location</button></div></div>
+          </div><input type="hidden" id="add-loc-val"/>
+        </div>
+        <div class="field"><label class="lbl">Date (MM/DD/YYYY)</label>
+          <input class="inp" id="add-date" type="text" placeholder="MM/DD/YYYY" maxlength="10"/></div>
+      </div>
+      <div class="field"><label class="lbl">Reported By</label>
+        <input class="inp" id="add-reported-by" type="text" placeholder="Name or initials"/></div>
+      <div class="two-col">
+        <div class="field"><label class="lbl">Manufacturer</label>
+          <div class="combo-wrap" id="add-mfr-wrap">
+            <div class="combo-sel" id="add-mfr-sel" tabindex="0"><span class="combo-ph" id="add-mfr-ph">Select manufacturer…</span><span class="combo-arrow">▾</span></div>
+            <div class="combo-dd" id="add-mfr-dd"><input class="combo-srch" id="add-mfr-srch" placeholder="Search…"/><div class="combo-list" id="add-mfr-list"></div><div class="combo-add-row"><button class="combo-add-btn" id="add-mfr-add">+ Add manufacturer</button></div></div>
+          </div><input type="hidden" id="add-mfr-val"/>
+        </div>
+        <div class="field"><label class="lbl">Equipment / Fixture</label>
+          <div class="combo-wrap" id="add-equip-wrap">
+            <div class="combo-sel" id="add-equip-sel" tabindex="0"><span class="combo-ph" id="add-equip-ph">Select fixture…</span><span class="combo-arrow">▾</span></div>
+            <div class="combo-dd" id="add-equip-dd"><input class="combo-srch" id="add-equip-srch" placeholder="Search…"/><div class="combo-list" id="add-equip-list"></div><div class="combo-add-row"><button class="combo-add-btn" id="add-equip-add">+ Add fixture</button></div></div>
+          </div><input type="hidden" id="add-equip-val"/>
+        </div>
+      </div>
+      <div class="field"><label class="lbl">Tools Used</label>
+        <div class="combo-wrap" id="add-tools-wrap">
+          <div class="combo-sel" id="add-tools-sel" tabindex="0"><span class="combo-ph" id="add-tools-ph">Select tools…</span><span class="combo-arrow">▾</span></div>
+          <div class="combo-dd" id="add-tools-dd"><input class="combo-srch" id="add-tools-srch" placeholder="Search…"/><div class="combo-list" id="add-tools-list"></div><div class="combo-add-row"><button class="combo-add-btn" id="add-tools-add">+ Add tool</button></div></div>
+        </div>
+      </div>
+      <div class="field"><label class="lbl">Steps Taken to Solve</label>
+        <div id="steps-container"></div>
+        <button type="button" class="btn-add-step" id="add-step-btn">+ Add Step</button>
+      </div>
+      <div class="field"><label class="lbl">Notes</label>
+        <textarea class="inp" id="add-notes" rows="2" placeholder="Internal notes, observations, follow-up items…"></textarea></div>
+      <div class="field"><label class="lbl">Helpful Links</label>
+        <textarea class="inp" id="add-links" rows="2" placeholder="Paste URLs here, one per line…"></textarea></div>
+      <div class="form-actions">
+        <button class="btn-secondary" id="add-cancel-btn">Cancel</button>
+        <button class="btn-primary" id="add-save-btn">Save to Google Sheets</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT -->
+<div class="view" id="view-edit">
+  <div class="form-wrap">
+    <button class="btn-back" id="edit-back-btn">← Back to Entry</button>
+    <h2 class="form-title">Edit Entry</h2>
+    <input type="hidden" id="edit-id"/>
+    <div class="form">
+      <div class="field"><label class="lbl">Issue / Problem *</label>
+        <textarea class="inp" id="edit-issue" rows="2"></textarea></div>
+      <div class="two-col">
+        <div class="field"><label class="lbl">Location</label>
+          <div class="combo-wrap" id="edit-loc-wrap">
+            <div class="combo-sel" id="edit-loc-sel" tabindex="0"><span class="combo-ph" id="edit-loc-ph">Select location…</span><span class="combo-arrow">▾</span></div>
+            <div class="combo-dd" id="edit-loc-dd"><input class="combo-srch" id="edit-loc-srch" placeholder="Search…"/><div class="combo-list" id="edit-loc-list"></div><div class="combo-add-row"><button class="combo-add-btn" id="edit-loc-add">+ Add location</button></div></div>
+          </div><input type="hidden" id="edit-loc-val"/>
+        </div>
+        <div class="field"><label class="lbl">Date (MM/DD/YYYY)</label>
+          <input class="inp" id="edit-date" type="text" placeholder="MM/DD/YYYY" maxlength="10"/></div>
+      </div>
+      <div class="field"><label class="lbl">Reported By</label>
+        <input class="inp" id="edit-reported-by" type="text"/></div>
+      <div class="two-col">
+        <div class="field"><label class="lbl">Manufacturer</label>
+          <div class="combo-wrap" id="edit-mfr-wrap">
+            <div class="combo-sel" id="edit-mfr-sel" tabindex="0"><span class="combo-ph" id="edit-mfr-ph">Select manufacturer…</span><span class="combo-arrow">▾</span></div>
+            <div class="combo-dd" id="edit-mfr-dd"><input class="combo-srch" id="edit-mfr-srch" placeholder="Search…"/><div class="combo-list" id="edit-mfr-list"></div><div class="combo-add-row"><button class="combo-add-btn" id="edit-mfr-add">+ Add manufacturer</button></div></div>
+          </div><input type="hidden" id="edit-mfr-val"/>
+        </div>
+        <div class="field"><label class="lbl">Equipment / Fixture</label>
+          <div class="combo-wrap" id="edit-equip-wrap">
+            <div class="combo-sel" id="edit-equip-sel" tabindex="0"><span class="combo-ph" id="edit-equip-ph">Select fixture…</span><span class="combo-arrow">▾</span></div>
+            <div class="combo-dd" id="edit-equip-dd"><input class="combo-srch" id="edit-equip-srch" placeholder="Search…"/><div class="combo-list" id="edit-equip-list"></div><div class="combo-add-row"><button class="combo-add-btn" id="edit-equip-add">+ Add fixture</button></div></div>
+          </div><input type="hidden" id="edit-equip-val"/>
+        </div>
+      </div>
+      <div class="field"><label class="lbl">Tools Used</label>
+        <div class="combo-wrap" id="edit-tools-wrap">
+          <div class="combo-sel" id="edit-tools-sel" tabindex="0"><span class="combo-ph" id="edit-tools-ph">Select tools…</span><span class="combo-arrow">▾</span></div>
+          <div class="combo-dd" id="edit-tools-dd"><input class="combo-srch" id="edit-tools-srch" placeholder="Search…"/><div class="combo-list" id="edit-tools-list"></div><div class="combo-add-row"><button class="combo-add-btn" id="edit-tools-add">+ Add tool</button></div></div>
+        </div>
+      </div>
+      <div class="field"><label class="lbl">Steps Taken to Solve</label>
+        <div id="steps-container-edit"></div>
+        <button type="button" class="btn-add-step" id="edit-add-step-btn">+ Add Step</button>
+      </div>
+      <div class="field"><label class="lbl">Notes</label>
+        <textarea class="inp" id="edit-notes" rows="2"></textarea></div>
+      <div class="field"><label class="lbl">Helpful Links</label>
+        <textarea class="inp" id="edit-links" rows="2"></textarea></div>
+      <div class="form-actions">
+        <button class="btn-secondary" id="edit-cancel-btn">Cancel</button>
+        <button class="btn-primary" id="edit-save-btn">Update Entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL -->
+<div class="view" id="view-detail">
+  <div class="detail-wrap">
+    <button class="btn-back" id="detail-back-btn">← All Issues</button>
+    <div class="detail-card">
+      <div class="detail-header">
+        <h2 class="detail-title" id="detail-title"></h2>
+        <div class="detail-btns">
+          <button class="btn-print" id="detail-print-btn">🖨️</button>
+          <button class="btn-edit-entry" id="detail-edit-btn">✏️ Edit</button>
+          <button class="btn-del-entry" id="detail-delete-btn">🗑️</button>
+        </div>
+      </div>
+      <div class="meta-row" id="detail-meta"></div>
+      <div id="detail-steps-sec" class="detail-sec"><div class="detail-sec-title">Steps Taken</div><ol class="step-list" id="detail-steps"></ol></div>
+      <div id="detail-tools-sec" class="detail-sec"><div class="detail-sec-title">Tools Used</div><div id="detail-tools-badges" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
+      <div id="detail-notes-sec" class="detail-sec"><div class="detail-sec-title">Notes</div><div class="detail-text" id="detail-notes"></div></div>
+      <div id="detail-links-sec" class="detail-sec"><div class="detail-sec-title">Helpful Links</div><div class="links-list" id="detail-links"></div></div>
+      <div class="timestamps"><span id="detail-created"></span><span class="synced-label">✓ Synced to Google Sheets</span></div>
+    </div>
+    <div class="comments-card">
+      <div class="comments-title">💬 Comments <span class="cmt-count" id="comment-count">0</span></div>
+      <div class="comments-list" id="comments-list"></div>
+      <div class="comment-form">
+        <div class="comment-inputs">
+          <input class="comment-author-inp" id="comment-author" placeholder="Your name…"/>
+          <textarea class="comment-text-inp" id="comment-text" placeholder="Add a note or observation…" rows="2"></textarea>
+        </div>
+        <button class="comment-submit" id="comment-submit-btn">Post Comment</button>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+
+<div class="kbd-hint" id="kbd-hint">
+  <span><kbd>N</kbd> New</span><span><kbd>R</kbd> Refresh</span><span><kbd>T</kbd> Theme</span>
+  <span><kbd>V</kbd> View</span><span><kbd>/</kbd> Search</span><span><kbd>Esc</kbd> Back</span><span><kbd>?</kbd> Hide</span>
+</div>
+
+<script>
+// ════════════════════════════════
+// STATE
+// ════════════════════════════════
+const SK='lightfix-script-url', TK='lightfix-tools-db', MK='lightfix-mfrs-db',
+      EK='lightfix-equip-db',   LK='lightfix-locs-db',  AK='lightfix-loc-addrs',
+      CK='lightfix-comments';
+
+let scriptUrl = localStorage.getItem(SK)||'';
+let allEntries = [];
+let toolsDB  = JSON.parse(localStorage.getItem(TK)||'null') || ['Multimeter','DMX Analyzer','Dimmer Tester','Cable Tester','Oscilloscope','Gel Roller','C-Wrench','Pipe Wrench','Screwdriver Set','Voltage Tester','Patch Bay','Signal Generator','Light Meter','Infrared Thermometer'];
+let mfrsDB   = JSON.parse(localStorage.getItem(MK)||'null') || ['ETC','Chauvet','Martin','Robe','Arri','Aputure','Litepanels','Rosco','Strand Lighting','Leviton','Elation','High End Systems','City Theatrical','TMB'];
+let equipDB  = JSON.parse(localStorage.getItem(EK)||'null') || ['Source Four 750w','Source Four 575w','Moving Head 200w','LED Par 64','Fresnel 1kw','Cyc Light','Strip Light','Follow Spot','Dimmer Rack','DMX Controller'];
+let locsDB   = JSON.parse(localStorage.getItem(LK)||'null') || ['Stage Left','Stage Right','Center Stage','Upstage','Downstage','Lighting Booth','Grid','Catwalk','FOH','Backstage'];
+let locAddrs = JSON.parse(localStorage.getItem(AK)||'{}');
+let commentsDB = {};
+let currentDetailId = null;
+let addToolsSel=[], editToolsSel=[];
+let addMfrSel='', editMfrSel='';
+let addEquipSel='', editEquipSel='';
+let addLocSel='', editLocSel='';
+let activeSort='newest', activeMfr='', activeLoc='', activeEquip='';
+let selectedLocForMap = null;
+let leafletMap = null, leafletMarkers = [];
+
+// Saves
+const saveTDB=()=>localStorage.setItem(TK,JSON.stringify(toolsDB));
+const saveMDB=()=>localStorage.setItem(MK,JSON.stringify(mfrsDB));
+const saveEDB=()=>localStorage.setItem(EK,JSON.stringify(equipDB));
+const saveLDB=()=>localStorage.setItem(LK,JSON.stringify(locsDB));
+const saveADB=()=>localStorage.setItem(AK,JSON.stringify(locAddrs));
+const loadCDB=()=>{try{commentsDB=JSON.parse(localStorage.getItem(CK)||'{}')}catch{commentsDB={}}};
+const saveCDB=()=>localStorage.setItem(CK,JSON.stringify(commentsDB));
+const getCmts=id=>commentsDB[id]||[];
+
+// ════════════════════════════════
+// HELPERS
+// ════════════════════════════════
+const $=id=>document.getElementById(id);
+const esc=s=>{if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')};
+
+function showView(n){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('view-'+n).classList.add('active'); window.scrollTo(0,0);
+  document.querySelectorAll('.combo-dd.open').forEach(d=>d.classList.remove('open'));
+}
+function showToast(msg,type='success'){
+  const t=$('toast'); t.textContent=(type==='error'?'⚠️ ':'✓ ')+msg;
+  t.style.background=type==='error'?'#8b2020':'#1a5c2a'; t.style.display='block';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',3500);
+}
+const setLoading=on=>$('loading-screen').style.display=on?'flex':'none';
+const setSyncing=on=>$('sync-badge').style.display=on?'inline-block':'none';
+
+// ── AUTO-EXPAND TEXTAREAS ──────────────────
+function autoExpand(el){
+  if(!el)return;
+  el.style.height='auto';
+  el.style.height=el.scrollHeight+'px';
+}
+// Listen on both textarea.inp and step-inp
+document.addEventListener('input',e=>{
+  if(e.target.tagName==='TEXTAREA'||(e.target.classList&&e.target.classList.contains('step-inp')))
+    autoExpand(e.target);
+});
+function initExpandAll(root){
+  (root||document).querySelectorAll('textarea.inp, .step-inp').forEach(el=>autoExpand(el));
+}
+
+// ── DATE MASK MM/DD/YYYY ──────────────────
+function maskDate(el){
+  el.addEventListener('input',()=>{
+    let v=el.value.replace(/\D/g,'').slice(0,8);
+    if(v.length>4) v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
+    else if(v.length>2) v=v.slice(0,2)+'/'+v.slice(2);
+    el.value=v;
+  });
+}
+
+// ════════════════════════════════
+// FILTER / SORT
+// ════════════════════════════════
+function applySort(arr){
+  const r=arr.slice();
+  switch(activeSort){
+    case'oldest': r.sort((a,b)=>new Date(a.createdAt||0)-new Date(b.createdAt||0));break;
+    case'az':     r.sort((a,b)=>(a.issue||'').localeCompare(b.issue||''));break;
+    case'za':     r.sort((a,b)=>(b.issue||'').localeCompare(a.issue||''));break;
+    case'steps':  r.sort((a,b)=>(b.steps||[]).length-(a.steps||[]).length);break;
+    default:      r.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+  }
+  return r;
+}
+function applyFilters(arr){
+  let r=arr;
+  if(activeMfr)  r=r.filter(e=>(e.manufacturer||'')===activeMfr);
+  if(activeLoc)  r=r.filter(e=>(e.location||'')===activeLoc);
+  if(activeEquip)r=r.filter(e=>(e.equipment||'')===activeEquip);
+  return r;
+}
+function populateFilterSelects(){
+  function fill(id,dflt,vals){
+    const s=$(id),prev=s.value;
+    s.innerHTML=`<option value="">${dflt}</option>`;
+    [...new Set(vals.filter(Boolean))].sort().forEach(v=>{
+      const o=document.createElement('option');o.value=o.textContent=v;s.appendChild(o);
+    });
+    s.value=prev;
+  }
+  fill('filter-mfr','All manufacturers',allEntries.map(e=>e.manufacturer));
+  fill('filter-loc','All locations',allEntries.map(e=>e.location));
+  fill('filter-equip','All equipment',allEntries.map(e=>e.equipment));
+}
+function updateClearBtn(){$('filter-clear-btn').style.display=(activeMfr||activeLoc||activeEquip)?'inline':'none'}
+function refreshIssues(){
+  const r=applySort(applyFilters(allEntries));
+  renderGrid(r);
+  if(!$('search-input').value.trim())
+    $('list-title').textContent='All Issues ('+r.length+(r.length!==allEntries.length?' of '+allEntries.length:'')+')';
+}
+
+$('sort-select').addEventListener('change',()=>{activeSort=$('sort-select').value;refreshIssues()});
+$('filter-mfr').addEventListener('change',()=>{activeMfr=$('filter-mfr').value;updateClearBtn();refreshIssues()});
+$('filter-loc').addEventListener('change',()=>{activeLoc=$('filter-loc').value;updateClearBtn();refreshIssues()});
+$('filter-equip').addEventListener('change',()=>{activeEquip=$('filter-equip').value;updateClearBtn();refreshIssues()});
+$('filter-clear-btn').addEventListener('click',()=>{
+  activeMfr=activeLoc=activeEquip='';
+  ['filter-mfr','filter-loc','filter-equip'].forEach(id=>$(id).value='');
+  updateClearBtn();refreshIssues();
+});
+
+// ════════════════════════════════
+// COMBO — MULTI SELECT
+// ════════════════════════════════
+function buildMultiCombo(cfg, getDB, getSelected, setSelected, onAdd, label){
+  const box=$(cfg.sel), ph=$(cfg.ph), dd=$(cfg.dd), srch=$(cfg.srch), lst=$(cfg.list), addBtn=$(cfg.add);
+  function renderTags(){
+    box.querySelectorAll('.combo-tag').forEach(t=>t.remove());
+    const cur=getSelected(); ph.style.display=cur.length?'none':'inline';
+    cur.forEach(item=>{
+      const tag=document.createElement('span'); tag.className='combo-tag';
+      tag.innerHTML=esc(item)+`<button class="combo-tag-x" data-v="${esc(item)}">×</button>`;
+      tag.querySelector('.combo-tag-x').addEventListener('click',e=>{
+        e.stopPropagation(); setSelected(getSelected().filter(x=>x!==e.target.dataset.v));
+        renderTags(); renderList();
+      });
+      box.insertBefore(tag,ph);
+    });
+  }
+  function renderList(f=''){
+    const items=getDB().slice().sort(), cur=getSelected(), fl=f.toLowerCase();
+    const shown=fl?items.filter(i=>i.toLowerCase().includes(fl)):items;
+    lst.innerHTML=shown.length
+      ? shown.map(item=>`<div class="combo-item${cur.includes(item)?' sel':''}" data-v="${esc(item)}"><span class="chk">${cur.includes(item)?'✓':''}</span>${esc(item)}</div>`).join('')
+      : '<div class="combo-empty">No matches.</div>';
+    lst.querySelectorAll('.combo-item').forEach(el=>el.addEventListener('click',()=>{
+      const v=el.dataset.v, c=getSelected();
+      setSelected(c.includes(v)?c.filter(x=>x!==v):[...c,v]);
+      renderTags(); renderList(srch.value);
+    }));
+    addBtn.textContent=srch.value.trim()?`+ Add "${srch.value.trim()}" as ${label}`:`+ Add new ${label}`;
+  }
+  box.addEventListener('click',()=>{
+    const open=dd.classList.contains('open');
+    document.querySelectorAll('.combo-dd.open').forEach(d=>d.classList.remove('open'));
+    if(!open){dd.classList.add('open');srch.value='';renderList();srch.focus();}
+  });
+  srch.addEventListener('input',()=>renderList(srch.value));
+  srch.addEventListener('keydown',e=>e.stopPropagation());
+  addBtn.addEventListener('click',()=>{
+    const v=(srch.value.trim())||prompt(`New ${label} name:`);
+    if(!v)return; onAdd(v); renderList(srch.value);
+  });
+  renderTags();
+  return{renderTags, renderList};
+}
+
+// ════════════════════════════════
+// COMBO — SINGLE SELECT
+// ════════════════════════════════
+function buildSingleCombo(cfg, getDB, getValue, setValue, onAdd, label){
+  const box=$(cfg.sel), ph=$(cfg.ph), dd=$(cfg.dd), srch=$(cfg.srch), lst=$(cfg.list), addBtn=$(cfg.add);
+  function renderLabel(){
+    box.querySelectorAll('.combo-tag').forEach(t=>t.remove());
+    const v=getValue(); ph.style.display=v?'none':'inline';
+    if(v){
+      const tag=document.createElement('span'); tag.className='combo-tag';
+      tag.innerHTML=esc(v)+`<button class="combo-tag-x">×</button>`;
+      tag.querySelector('.combo-tag-x').addEventListener('click',e=>{
+        e.stopPropagation(); setValue(''); renderLabel(); renderList();
+      });
+      box.insertBefore(tag,ph);
+    }
+  }
+  function renderList(f=''){
+    const items=getDB().slice().sort(), fl=f.toLowerCase();
+    const shown=fl?items.filter(i=>i.toLowerCase().includes(fl)):items;
+    lst.innerHTML=shown.length
+      ? shown.map(item=>`<div class="combo-item${getValue()===item?' sel':''}" data-v="${esc(item)}"><span class="chk">${getValue()===item?'✓':''}</span>${esc(item)}</div>`).join('')
+      : '<div class="combo-empty">No matches.</div>';
+    lst.querySelectorAll('.combo-item').forEach(el=>el.addEventListener('click',()=>{
+      setValue(el.dataset.v); renderLabel(); dd.classList.remove('open');
+    }));
+    addBtn.textContent=srch.value.trim()?`+ Add "${srch.value.trim()}" as ${label}`:`+ Add new ${label}`;
+  }
+  box.addEventListener('click',()=>{
+    const open=dd.classList.contains('open');
+    document.querySelectorAll('.combo-dd.open').forEach(d=>d.classList.remove('open'));
+    if(!open){dd.classList.add('open');srch.value='';renderList();srch.focus();}
+  });
+  srch.addEventListener('input',()=>renderList(srch.value));
+  srch.addEventListener('keydown',e=>e.stopPropagation());
+  addBtn.addEventListener('click',()=>{
+    const v=(srch.value.trim())||prompt(`New ${label} name:`);
+    if(!v)return; onAdd(v); renderList(srch.value);
+  });
+  renderLabel();
+  return{renderLabel, renderList};
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.combo-wrap'))
+    document.querySelectorAll('.combo-dd.open').forEach(d=>d.classList.remove('open'));
+});
+
+// ════════════════════════════════
+// COMBO INSTANCES
+// ════════════════════════════════
+let addToolsCombo, editToolsCombo;
+let addMfrCombo,   editMfrCombo;
+let addEquipCombo, editEquipCombo;
+let addLocCombo,   editLocCombo;
+
+function initCombos(){
+  // Helper: when user adds via combo dropdown, push to DB and also select it
+  function makeMultiAdder(getDB, save, getCombo, getSel, setSel){
+    return val=>{
+      const db=getDB();
+      if(!db.includes(val)){ db.push(val); save(); renderDBs(); }
+      const cur=getSel(); if(!cur.includes(val)) setSel([...cur,val]);
+      getCombo().renderTags();
+      showToast(`"${val}" added!`);
+    };
+  }
+  function makeSingleAdder(getDB, save, getCombo, setVal, hiddenId){
+    return val=>{
+      const db=getDB();
+      if(!db.includes(val)){ db.push(val); save(); renderDBs(); }
+      setVal(val); if(hiddenId)$(hiddenId).value=val;
+      getCombo().renderLabel();
+      showToast(`"${val}" added!`);
+    };
+  }
+
+  addToolsCombo = buildMultiCombo(
+    {sel:'add-tools-sel',ph:'add-tools-ph',dd:'add-tools-dd',srch:'add-tools-srch',list:'add-tools-list',add:'add-tools-add'},
+    ()=>toolsDB, ()=>addToolsSel, v=>{addToolsSel=v;},
+    makeMultiAdder(()=>toolsDB, saveTDB, ()=>addToolsCombo, ()=>addToolsSel, v=>{addToolsSel=v;}), 'tool');
+
+  editToolsCombo = buildMultiCombo(
+    {sel:'edit-tools-sel',ph:'edit-tools-ph',dd:'edit-tools-dd',srch:'edit-tools-srch',list:'edit-tools-list',add:'edit-tools-add'},
+    ()=>toolsDB, ()=>editToolsSel, v=>{editToolsSel=v;},
+    makeMultiAdder(()=>toolsDB, saveTDB, ()=>editToolsCombo, ()=>editToolsSel, v=>{editToolsSel=v;}), 'tool');
+
+  addMfrCombo = buildSingleCombo(
+    {sel:'add-mfr-sel',ph:'add-mfr-ph',dd:'add-mfr-dd',srch:'add-mfr-srch',list:'add-mfr-list',add:'add-mfr-add'},
+    ()=>mfrsDB, ()=>addMfrSel, v=>{addMfrSel=v;$('add-mfr-val').value=v;},
+    makeSingleAdder(()=>mfrsDB, saveMDB, ()=>addMfrCombo, v=>{addMfrSel=v;}, 'add-mfr-val'), 'manufacturer');
+
+  editMfrCombo = buildSingleCombo(
+    {sel:'edit-mfr-sel',ph:'edit-mfr-ph',dd:'edit-mfr-dd',srch:'edit-mfr-srch',list:'edit-mfr-list',add:'edit-mfr-add'},
+    ()=>mfrsDB, ()=>editMfrSel, v=>{editMfrSel=v;$('edit-mfr-val').value=v;},
+    makeSingleAdder(()=>mfrsDB, saveMDB, ()=>editMfrCombo, v=>{editMfrSel=v;}, 'edit-mfr-val'), 'manufacturer');
+
+  addEquipCombo = buildSingleCombo(
+    {sel:'add-equip-sel',ph:'add-equip-ph',dd:'add-equip-dd',srch:'add-equip-srch',list:'add-equip-list',add:'add-equip-add'},
+    ()=>equipDB, ()=>addEquipSel, v=>{addEquipSel=v;$('add-equip-val').value=v;},
+    makeSingleAdder(()=>equipDB, saveEDB, ()=>addEquipCombo, v=>{addEquipSel=v;}, 'add-equip-val'), 'fixture');
+
+  editEquipCombo = buildSingleCombo(
+    {sel:'edit-equip-sel',ph:'edit-equip-ph',dd:'edit-equip-dd',srch:'edit-equip-srch',list:'edit-equip-list',add:'edit-equip-add'},
+    ()=>equipDB, ()=>editEquipSel, v=>{editEquipSel=v;$('edit-equip-val').value=v;},
+    makeSingleAdder(()=>equipDB, saveEDB, ()=>editEquipCombo, v=>{editEquipSel=v;}, 'edit-equip-val'), 'fixture');
+
+  addLocCombo = buildSingleCombo(
+    {sel:'add-loc-sel',ph:'add-loc-ph',dd:'add-loc-dd',srch:'add-loc-srch',list:'add-loc-list',add:'add-loc-add'},
+    ()=>locsDB, ()=>addLocSel, v=>{addLocSel=v;$('add-loc-val').value=v;},
+    makeSingleAdder(()=>locsDB, saveLDB, ()=>addLocCombo, v=>{addLocSel=v;}, 'add-loc-val'), 'location');
+
+  editLocCombo = buildSingleCombo(
+    {sel:'edit-loc-sel',ph:'edit-loc-ph',dd:'edit-loc-dd',srch:'edit-loc-srch',list:'edit-loc-list',add:'edit-loc-add'},
+    ()=>locsDB, ()=>editLocSel, v=>{editLocSel=v;$('edit-loc-val').value=v;},
+    makeSingleAdder(()=>locsDB, saveLDB, ()=>editLocCombo, v=>{editLocSel=v;}, 'edit-loc-val'), 'location');
+}
+
+// ════════════════════════════════
+// DATABASE PANELS
+// ════════════════════════════════
+// Sub-tab switching
+document.querySelectorAll('.btn-db-tab').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.btn-db-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.db-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  $('dbpanel-'+btn.dataset.db).classList.add('active');
+  if(btn.dataset.db==='locations') initMap();
+}));
+
+// Database search
+$('db-search').addEventListener('input',()=>renderDBs($('db-search').value.trim().toLowerCase()));
+
+function renderDBGrid(containerId, items, emoji, onDelete, onRename, onMapPin, filter){
+  const g=$(containerId);
+  const f=(filter||'').toLowerCase();
+  const shown=f ? items.filter(i=>i.toLowerCase().includes(f)) : items;
+  if(!shown.length){
+    g.innerHTML=`<div style="color:var(--text-dim);font-size:13px;grid-column:1/-1">${f?'No matches.':'None yet — add one below.'}</div>`;
+    return;
+  }
+  g.innerHTML='';
+  shown.slice().sort().forEach(name=>{
+    const div=document.createElement('div'); div.className='db-item';
+    const addrInfo=locAddrs[name];
+    const nameEl=document.createElement('div'); nameEl.className='db-item-name';
+    nameEl.textContent=emoji+' '+name;
+    div.appendChild(nameEl);
+    if(addrInfo){
+      const addrEl=document.createElement('div'); addrEl.className='db-item-addr';
+      addrEl.textContent='📍 '+addrInfo.addr; div.appendChild(addrEl);
+    }
+    const btns=document.createElement('div'); btns.className='db-item-btns';
+
+    const renBtn=document.createElement('button'); renBtn.className='btn-sm'; renBtn.textContent='✏️ Rename';
+    renBtn.addEventListener('click',()=>onRename(name));
+    btns.appendChild(renBtn);
+
+    if(onMapPin){
+      const mapBtn=document.createElement('button'); mapBtn.className='btn-sm'; mapBtn.textContent='🗺️ Map';
+      mapBtn.addEventListener('click',()=>{
+        onMapPin(name);
+        // switch to locations tab if not already there
+        document.querySelector('.btn-db-tab[data-db="locations"]').click();
+        setTimeout(()=>document.querySelector('.map-section').scrollIntoView({behavior:'smooth'}),200);
+      });
+      btns.appendChild(mapBtn);
+    }
+
+    const delBtn=document.createElement('button'); delBtn.className='btn-sm danger'; delBtn.textContent='✕';
+    delBtn.addEventListener('click',()=>{
+      if(!confirm(`Remove "${name}"?`))return;
+      onDelete(name);
+      renderDBs($('db-search').value.trim().toLowerCase());
+      showToast('Removed.');
+    });
+    btns.appendChild(delBtn);
+    div.appendChild(btns); g.appendChild(div);
+  });
+}
+
+function makeRenamer(db, save){
+  return oldName=>{
+    const newName=(prompt('Rename to:',oldName)||'').trim();
+    if(!newName||newName===oldName)return;
+    if(db.includes(newName)){showToast(`"${newName}" already exists.`,'error');return;}
+    const i=db.indexOf(oldName); if(i===-1)return;
+    db[i]=newName; save();
+    renderDBs($('db-search').value.trim().toLowerCase());
+    showToast('Renamed!');
+  };
+}
+
+function renderDBs(filter){
+  const f=filter||'';
+  renderDBGrid('tools-db-grid', toolsDB,'🔧',
+    n=>{toolsDB=toolsDB.filter(x=>x!==n);saveTDB();},
+    makeRenamer(toolsDB,saveTDB), null, f);
+  renderDBGrid('equip-db-grid', equipDB,'⚙️',
+    n=>{equipDB=equipDB.filter(x=>x!==n);saveEDB();},
+    makeRenamer(equipDB,saveEDB), null, f);
+  renderDBGrid('mfrs-db-grid', mfrsDB,'🏭',
+    n=>{mfrsDB=mfrsDB.filter(x=>x!==n);saveMDB();},
+    makeRenamer(mfrsDB,saveMDB), null, f);
+  renderDBGrid('locs-db-grid', locsDB,'📍',
+    n=>{delete locAddrs[n];saveADB();locsDB=locsDB.filter(x=>x!==n);saveLDB();removeMapMarker(n);},
+    makeRenamer(locsDB,saveLDB),
+    name=>{
+      selectedLocForMap=name;
+      $('map-selected-label').textContent='Pinning: '+name;
+      $('map-addr-input').value=(locAddrs[name]?.addr)||'';
+    }, f);
+}
+
+// Wire the add buttons — key fix: always reference live arrays via getter
+function wireDbButtons(){
+  function handler(inputId, btnId, getDB, save, label){
+    function doAdd(){
+      const val=$(inputId).value.trim(); if(!val)return;
+      const db=getDB();
+      if(db.includes(val)){showToast(`"${val}" already exists.`,'error');return;}
+      db.push(val); save();
+      renderDBs($('db-search').value.trim().toLowerCase());
+      $(inputId).value='';
+      showToast(`"${val}" added to ${label}!`);
+    }
+    $(btnId).addEventListener('click',doAdd);
+    $(inputId).addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doAdd();}});
+  }
+  handler('new-tool-input','new-tool-btn',()=>toolsDB,saveTDB,'Tools');
+  handler('new-mfr-input','new-mfr-btn',()=>mfrsDB,saveMDB,'Manufacturers');
+  handler('new-equip-input','new-equip-btn',()=>equipDB,saveEDB,'Equipment');
+  handler('new-loc-input','new-loc-btn',()=>locsDB,saveLDB,'Locations');
+}
+
+// Main nav tab (Issues / Databases)
+document.querySelectorAll('.btn-nav-tab').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.btn-nav-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['issues','databases'].forEach(t=>$('tab-'+t).style.display='none');
+  $('tab-'+btn.dataset.tab).style.display='block';
+}));
+
+// ════════════════════════════════
+// LEAFLET MAP
+// ════════════════════════════════
+function initMap(){
+  if(leafletMap) return;
+  if(!document.querySelector('link[href*="leaflet"]')){
+    const css=document.createElement('link');
+    css.rel='stylesheet';
+    css.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+    document.head.appendChild(css);
+  }
+  if(!window.L){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    s.onload=createMap; document.head.appendChild(s);
+  } else { createMap(); }
+}
+function createMap(){
+  if(leafletMap)return;
+  leafletMap=L.map('loc-map').setView([39.5,-98.35],4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OSM</a> contributors', maxZoom:19
+  }).addTo(leafletMap);
+  // Restore saved pins
+  Object.entries(locAddrs).forEach(([name,info])=>{
+    if(info.lat&&info.lng) addMapMarker(name,info.lat,info.lng,info.addr);
+  });
+}
+function addMapMarker(name,lat,lng,addr){
+  if(!leafletMap)return;
+  const m=L.marker([lat,lng]).addTo(leafletMap)
+    .bindPopup(`<strong>${name}</strong><br>${addr||''}`);
+  leafletMarkers.push({name,marker:m});
+}
+function removeMapMarker(name){
+  if(!leafletMap)return;
+  const i=leafletMarkers.findIndex(m=>m.name===name);
+  if(i!==-1){leafletMap.removeLayer(leafletMarkers[i].marker);leafletMarkers.splice(i,1);}
+}
+
+$('map-search-btn').addEventListener('click',async()=>{
+  if(!selectedLocForMap){showToast('Click 🗺️ Map on a location card first.','error');return;}
+  const q=$('map-addr-input').value.trim();
+  if(!q){showToast('Enter an address to search.','error');return;}
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`,{headers:{'Accept-Language':'en'}});
+    const data=await r.json();
+    if(!data.length){showToast('Address not found — try a more specific search.','error');return;}
+    const {lat,lon,display_name}=data[0];
+    removeMapMarker(selectedLocForMap);
+    locAddrs[selectedLocForMap]={addr:q,lat:parseFloat(lat),lng:parseFloat(lon)};
+    saveADB();
+    addMapMarker(selectedLocForMap,parseFloat(lat),parseFloat(lon),display_name);
+    leafletMap.setView([parseFloat(lat),parseFloat(lon)],15);
+    renderDBs($('db-search').value.trim().toLowerCase());
+    showToast(`📍 "${selectedLocForMap}" pinned!`);
+  } catch(e){ showToast('Map search failed — check your connection.','error'); }
+});
+
+// ════════════════════════════════
+// SETTINGS
+// ════════════════════════════════
+function updateConnectionUI(){
+  if(scriptUrl){
+    $('no-sheet-badge').style.display='none';
+    $('connected-row').style.display='flex';
+    $('connected-url-text').textContent=scriptUrl.length>52?scriptUrl.slice(0,49)+'…':scriptUrl;
+  } else {
+    $('no-sheet-badge').style.display='inline-block';
+    $('connected-row').style.display='none';
+  }
+}
+function openSettings(){$('url-input').value=scriptUrl;$('settings-modal').classList.add('open');}
+function closeSettings(){$('settings-modal').classList.remove('open');}
+$('settings-btn').addEventListener('click',openSettings);
+$('no-sheet-badge').addEventListener('click',openSettings);
+$('modal-close-btn').addEventListener('click',closeSettings);
+$('settings-modal').addEventListener('click',e=>{if(e.target===$('settings-modal'))closeSettings();});
+$('connect-btn').addEventListener('click',async()=>{
+  const url=$('url-input').value.trim(); if(!url)return;
+  localStorage.setItem(SK,url); scriptUrl=url;
+  updateConnectionUI(); closeSettings();
+  setLoading(true); await fetchEntries(); setLoading(false);
+  showToast('Connected to Google Sheets!');
+});
+
+// ════════════════════════════════
+// API
+// ════════════════════════════════
+async function fetchEntries(){
+  if(!scriptUrl){renderGrid([]);$('list-title').textContent='All Issues (0)';return;}
+  setSyncing(true);
+  try{
+    const res=await fetch(scriptUrl,{
+      method:'POST', headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({action:'getAll'})
+    });
+    const data=await res.json();
+    if(data.entries){allEntries=data.entries;populateFilterSelects();refreshIssues();}
+    else throw new Error(data.error||'No entries returned');
+  } catch(e){
+    showToast('Could not reach Google Sheets — check URL in ⚙️','error');
+    renderGrid([]);
+  }
+  setSyncing(false);
+}
+async function apiPost(body){
+  const res=await fetch(scriptUrl,{
+    method:'POST', headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// ════════════════════════════════
+// GRID
+// ════════════════════════════════
+let isCompact=localStorage.getItem('lightfix-view')==='compact';
+function applyView(){
+  const g=document.querySelector('.grid');
+  if(g)g.classList.toggle('compact',isCompact);
+  $('view-toggle-btn').textContent=isCompact?'⊞':'☰';
+}
+function toggleView(){isCompact=!isCompact;localStorage.setItem('lightfix-view',isCompact?'compact':'expanded');applyView();}
+$('view-toggle-btn').addEventListener('click',toggleView);
+
+function renderGrid(entries){
+  const grid=$('entries-grid');
+  if(!entries.length){
+    grid.innerHTML=!scriptUrl
+      ? `<div class="empty"><span class="empty-icon">⚙️</span><p>No Google Sheet connected. <button class="btn-inline" onclick="openSettings()">Connect one here</button></p></div>`
+      : `<div class="empty"><span class="empty-icon">💡</span><p>No issues found. <button class="btn-inline" onclick="startAdd()">Log one now</button></p></div>`;
+    return;
+  }
+  grid.innerHTML='<div class="grid">'+entries.map(cardHTML).join('')+'</div>';
+  grid.querySelectorAll('.card').forEach(c=>c.addEventListener('click',()=>showDetail(c.dataset.id)));
+  applyView();
+}
+function cardHTML(e){
+  const steps=e.steps||[];
+  const tools=e.tools?e.tools.split('||').map(t=>t.trim()).filter(Boolean):[];
+  const nc=getCmts(e.id).length;
+  const meta=[
+    e.location?`<span class="card-meta-item">📍 ${esc(e.location)}</span>`:'',
+    e.date?`<span class="card-meta-item">📅 ${esc(e.date)}</span>`:'',
+    e.reportedBy?`<span class="card-meta-item">👤 ${esc(e.reportedBy)}</span>`:'',
+    e.manufacturer?`<span class="card-meta-item">🏭 ${esc(e.manufacturer)}</span>`:'',
+    e.equipment?`<span class="card-meta-item">⚙️ ${esc(e.equipment)}</span>`:'',
+  ].join('');
+  return`<button class="card" data-id="${esc(e.id)}">
+    <p class="card-issue">${esc(e.issue)}</p>
+    <div class="card-meta">${meta}</div>
+    ${steps[0]?`<p class="card-preview">${esc(steps[0])}</p>`:''}
+    <div class="card-footer">
+      <span class="card-tag">${steps.length} step${steps.length!==1?'s':''}</span>
+      ${tools.length?`<span class="card-tools">🔧 ${esc(tools[0])}${tools.length>1?' +'+(tools.length-1):''}</span>`:''}
+      ${nc?`<span class="card-cmt">💬 ${nc}</span>`:''}
+    </div></button>`;
+}
+
+// ════════════════════════════════
+// SEARCH
+// ════════════════════════════════
+$('search-btn').addEventListener('click',doSearch);
+$('search-input').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+$('search-input').addEventListener('input',()=>{if(!$('search-input').value.trim())refreshIssues();});
+function doSearch(){
+  const q=$('search-input').value.trim().toLowerCase(); if(!q){refreshIssues();return;}
+  const r=allEntries.filter(e=>{
+    const t=e.tools?e.tools.split('||').map(x=>x.trim()):[];
+    return[e.issue,e.location,e.manufacturer,e.equipment,e.reportedBy,e.notes,...(e.steps||[]),...t]
+      .some(s=>(s||'').toLowerCase().includes(q));
+  });
+  renderGrid(applySort(r));
+  $('list-title').textContent=`${r.length} result${r.length!==1?'s':''} for "${q}"`;
+}
+
+// ════════════════════════════════
+// ADD
+// ════════════════════════════════
+function startAdd(){
+  ['add-issue','add-notes','add-links'].forEach(id=>{$(id).value='';autoExpand($(id));});
+  $('add-reported-by').value=''; $('add-date').value='';
+  addToolsSel=[]; addMfrSel=''; addEquipSel=''; addLocSel='';
+  $('add-mfr-val').value=''; $('add-equip-val').value=''; $('add-loc-val').value='';
+  addToolsCombo.renderTags(); addMfrCombo.renderLabel(); addEquipCombo.renderLabel(); addLocCombo.renderLabel();
+  renderSteps('steps-container',['']);
+  showView('add');
+}
+$('add-btn').addEventListener('click',startAdd);
+$('add-back-btn').addEventListener('click',()=>showView('home'));
+$('add-cancel-btn').addEventListener('click',()=>showView('home'));
+$('add-step-btn').addEventListener('click',()=>addStepRow('steps-container'));
+
+$('add-save-btn').addEventListener('click',async()=>{
+  const issue=$('add-issue').value.trim();
+  if(!issue){showToast('Please enter an issue description.','error');return;}
+  if(!scriptUrl){showToast('Connect a Google Sheet first via ⚙️','error');openSettings();return;}
+  $('add-save-btn').textContent='Saving…'; $('add-save-btn').disabled=true;
+  try{
+    const res=await apiPost({action:'add',issue,location:addLocSel,date:$('add-date').value,reportedBy:$('add-reported-by').value.trim(),manufacturer:addMfrSel,equipment:addEquipSel,tools:addToolsSel.join(' || '),steps:getSteps('steps-container'),notes:$('add-notes').value.trim(),links:$('add-links').value.trim()});
+    if(res.success){showToast('Issue logged!');await fetchEntries();showView('home');}
+    else throw new Error(res.error);
+  } catch(e){ showToast('Save failed: '+e.message,'error'); }
+  $('add-save-btn').textContent='Save to Google Sheets'; $('add-save-btn').disabled=false;
+});
+
+// ════════════════════════════════
+// EDIT
+// ════════════════════════════════
+$('edit-back-btn').addEventListener('click',()=>showDetail(currentDetailId));
+$('edit-cancel-btn').addEventListener('click',()=>showDetail(currentDetailId));
+$('edit-add-step-btn').addEventListener('click',()=>addStepRow('steps-container-edit'));
+
+function startEdit(entry){
+  $('edit-id').value=entry.id;
+  $('edit-issue').value=entry.issue||'';
+  $('edit-reported-by').value=entry.reportedBy||'';
+  $('edit-date').value=entry.date||'';
+  $('edit-notes').value=entry.notes||'';
+  $('edit-links').value=entry.links||'';
+  editToolsSel=(entry.tools||'').split('||').map(t=>t.trim()).filter(Boolean);
+  editToolsCombo.renderTags();
+  editMfrSel=entry.manufacturer||''; $('edit-mfr-val').value=editMfrSel; editMfrCombo.renderLabel();
+  editEquipSel=entry.equipment||''; $('edit-equip-val').value=editEquipSel; editEquipCombo.renderLabel();
+  editLocSel=entry.location||''; $('edit-loc-val').value=editLocSel; editLocCombo.renderLabel();
+  renderSteps('steps-container-edit', entry.steps?.length ? entry.steps : ['']);
+  showView('edit');
+  // expand textareas after render
+  setTimeout(()=>initExpandAll($('view-edit')),60);
+}
+
+$('edit-save-btn').addEventListener('click',async()=>{
+  const issue=$('edit-issue').value.trim();
+  if(!issue){showToast('Issue description required.','error');return;}
+  $('edit-save-btn').textContent='Updating…'; $('edit-save-btn').disabled=true;
+  try{
+    const res=await apiPost({action:'update',id:$('edit-id').value,issue,location:editLocSel,date:$('edit-date').value,reportedBy:$('edit-reported-by').value.trim(),manufacturer:editMfrSel,equipment:editEquipSel,tools:editToolsSel.join(' || '),steps:getSteps('steps-container-edit'),notes:$('edit-notes').value.trim(),links:$('edit-links').value.trim()});
+    if(res.success){showToast('Entry updated!');await fetchEntries();showDetail($('edit-id').value);}
+    else throw new Error(res.error);
+  } catch(e){ showToast('Update failed: '+e.message,'error'); }
+  $('edit-save-btn').textContent='Update Entry'; $('edit-save-btn').disabled=false;
+});
+
+// ════════════════════════════════
+// DETAIL
+// ════════════════════════════════
+$('detail-back-btn').addEventListener('click',()=>showView('home'));
+
+function showDetail(id){
+  const entry=allEntries.find(e=>e.id===id); if(!entry)return;
+  currentDetailId=id;
+  $('detail-title').textContent=entry.issue;
+  $('detail-meta').innerHTML=[
+    entry.location?`<span class="badge">📍 ${esc(entry.location)}</span>`:'',
+    entry.date?`<span class="badge">📅 ${esc(entry.date)}</span>`:'',
+    entry.reportedBy?`<span class="badge">👤 ${esc(entry.reportedBy)}</span>`:'',
+    entry.manufacturer?`<span class="badge">🏭 ${esc(entry.manufacturer)}</span>`:'',
+    entry.equipment?`<span class="badge">⚙️ ${esc(entry.equipment)}</span>`:'',
+  ].join('');
+
+  const steps=entry.steps||[];
+  if(steps.length){
+    $('detail-steps').innerHTML=steps.map(s=>`<li>${esc(s)}</li>`).join('');
+    $('detail-steps-sec').style.display='block';
+  } else $('detail-steps-sec').style.display='none';
+
+  const tools=entry.tools?entry.tools.split('||').map(t=>t.trim()).filter(Boolean):[];
+  if(tools.length){
+    $('detail-tools-badges').innerHTML=tools.map(t=>`<span class="badge badge-tool">🔧 ${esc(t)}</span>`).join('');
+    $('detail-tools-sec').style.display='block';
+  } else $('detail-tools-sec').style.display='none';
+
+  if(entry.notes){
+    $('detail-notes').textContent=entry.notes;
+    $('detail-notes-sec').style.display='block';
+  } else $('detail-notes-sec').style.display='none';
+
+  if(entry.links){
+    // Each link on its own line; word-break applied via CSS .links-list a
+    $('detail-links').innerHTML=entry.links.split('\n').filter(Boolean).map(l=>{
+      const url=l.trim();
+      return`<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>`;
+    }).join('');
+    $('detail-links-sec').style.display='block';
+  } else $('detail-links-sec').style.display='none';
+
+  $('detail-created').textContent=entry.createdAt?'Logged: '+new Date(entry.createdAt).toLocaleString():'';
+  $('detail-edit-btn').onclick=()=>startEdit(entry);
+  $('detail-delete-btn').onclick=()=>handleDelete(id);
+  $('detail-print-btn').onclick=()=>printEntry(entry);
+  renderComments(id); setupCommentForm(id);
+  showView('detail');
+}
+
+async function handleDelete(id){
+  if(!confirm('Delete this entry? This cannot be undone.'))return;
+  try{
+    const res=await apiPost({action:'delete',id});
+    if(res.success){delete commentsDB[id];saveCDB();showToast('Entry deleted.');await fetchEntries();showView('home');}
+    else throw new Error(res.error);
+  } catch(e){ showToast('Delete failed: '+e.message,'error'); }
+}
+
+// ════════════════════════════════
+// PRINT
+// ════════════════════════════════
+function printEntry(entry){
+  const tools=entry.tools?entry.tools.split('||').map(t=>t.trim()).filter(Boolean):[];
+  const steps=entry.steps||[], cmts=getCmts(entry.id);
+  $('print-area').innerHTML=`
+    <div class="detail-card" style="max-width:700px;margin:0 auto">
+      <div style="font-size:11px;color:#999;margin-bottom:8px">LightFix DB · ${new Date().toLocaleString()}</div>
+      <h2 class="detail-title" style="margin-bottom:12px">${esc(entry.issue)}</h2>
+      <div class="meta-row">
+        ${entry.location?`<span class="badge">📍 ${esc(entry.location)}</span>`:''}
+        ${entry.date?`<span class="badge">📅 ${esc(entry.date)}</span>`:''}
+        ${entry.reportedBy?`<span class="badge">👤 ${esc(entry.reportedBy)}</span>`:''}
+        ${entry.manufacturer?`<span class="badge">🏭 ${esc(entry.manufacturer)}</span>`:''}
+        ${entry.equipment?`<span class="badge">⚙️ ${esc(entry.equipment)}</span>`:''}
+      </div>
+      ${steps.length?`<div class="detail-sec"><div class="detail-sec-title">Steps</div><ol class="step-list">${steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></div>`:''}
+      ${tools.length?`<div class="detail-sec"><div class="detail-sec-title">Tools Used</div><p>${tools.map(t=>esc(t)).join(', ')}</p></div>`:''}
+      ${entry.notes?`<div class="detail-sec"><div class="detail-sec-title">Notes</div><p style="white-space:pre-wrap">${esc(entry.notes)}</p></div>`:''}
+      ${entry.links?`<div class="detail-sec"><div class="detail-sec-title">Links</div>${entry.links.split('\n').filter(Boolean).map(l=>`<div style="word-break:break-all">${esc(l.trim())}</div>`).join('')}</div>`:''}
+      ${cmts.length?`<div class="detail-sec"><div class="detail-sec-title">Comments</div>${cmts.map(c=>`<div style="border:1px solid #ccc;border-radius:6px;padding:8px;margin-bottom:6px"><strong>${esc(c.author||'Anon')}</strong> ${c.time?new Date(c.time).toLocaleString():''}<br>${esc(c.text)}</div>`).join('')}</div>`:''}
+      <div class="timestamps">Logged: ${entry.createdAt?new Date(entry.createdAt).toLocaleString():''}</div>
+    </div>`;
+  window.print();
+}
+
+// ════════════════════════════════
+// COMMENTS
+// ════════════════════════════════
+function renderComments(entryId){
+  const cmts=getCmts(entryId); $('comment-count').textContent=cmts.length;
+  const list=$('comments-list');
+  if(!cmts.length){list.innerHTML='<div class="comments-empty">No comments yet.</div>';return;}
+  list.innerHTML=cmts.map((c,i)=>`<div class="comment-item">
+    <div class="comment-header">
+      <span class="comment-author">👤 ${esc(c.author||'Anonymous')}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="comment-time">${c.time?new Date(c.time).toLocaleString():''}</span>
+        <button class="comment-delete" data-idx="${i}">🗑</button>
+      </div>
+    </div>
+    <div class="comment-body">${esc(c.text)}</div>
+  </div>`).join('');
+  list.querySelectorAll('.comment-delete').forEach(btn=>btn.addEventListener('click',()=>{
+    if(!confirm('Delete comment?'))return;
+    commentsDB[entryId].splice(parseInt(btn.dataset.idx),1);
+    saveCDB(); renderComments(entryId); showToast('Comment deleted.');
+  }));
+}
+function setupCommentForm(entryId){
+  const btn=$('comment-submit-btn'), nb=btn.cloneNode(true);
+  btn.parentNode.replaceChild(nb,btn);
+  nb.addEventListener('click',()=>{
+    const author=$('comment-author').value.trim();
+    const text=$('comment-text').value.trim();
+    if(!text){showToast('Please write a comment first.','error');return;}
+    if(!commentsDB[entryId])commentsDB[entryId]=[];
+    commentsDB[entryId].push({author:author||'Anonymous',text,time:new Date().toISOString()});
+    saveCDB(); $('comment-text').value=''; renderComments(entryId); showToast('Comment added!');
+  });
+}
+
+// ════════════════════════════════
+// STEPS — auto-expand textareas
+// ════════════════════════════════
+function renderSteps(cid, steps){
+  const c=$(cid); c.innerHTML='';
+  steps.forEach((v,i)=>appendStepRow(cid,v,i+1));
+}
+function addStepRow(cid){
+  appendStepRow(cid,'',$(cid).querySelectorAll('.step-row').length+1);
+}
+function appendStepRow(cid, val, n){
+  const c=$(cid), row=document.createElement('div');
+  row.className='step-row';
+  // Use textarea instead of input so it can auto-expand
+  row.innerHTML=`<span class="step-num">${n}</span><textarea class="step-inp" rows="1" placeholder="Step ${n}…">${esc(val)}</textarea><button type="button" class="step-remove">✕</button>`;
+  row.querySelector('.step-remove').addEventListener('click',()=>{row.remove();renumber(cid);});
+  row.querySelector('.step-inp').addEventListener('input',e=>autoExpand(e.target));
+  c.appendChild(row);
+  setTimeout(()=>autoExpand(row.querySelector('.step-inp')),0);
+}
+function renumber(cid){
+  $(cid).querySelectorAll('.step-row').forEach((row,i)=>{
+    row.querySelector('.step-num').textContent=i+1;
+    row.querySelector('.step-inp').placeholder='Step '+(i+1)+'…';
+  });
+}
+function getSteps(cid){
+  return Array.from($(cid).querySelectorAll('.step-inp')).map(i=>i.value.trim()).filter(Boolean);
+}
+
+// ════════════════════════════════
+// THEME
+// ════════════════════════════════
+let isLight=localStorage.getItem('lightfix-theme')==='light';
+function applyTheme(){
+  document.body.classList.toggle('light',isLight);
+  $('theme-btn').textContent=isLight?'☀️':'🌙';
+}
+function toggleTheme(){isLight=!isLight;localStorage.setItem('lightfix-theme',isLight?'light':'dark');applyTheme();}
+$('theme-btn').addEventListener('click',toggleTheme);
+
+// ════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ════════════════════════════════
+let kbdVisible=localStorage.getItem('lightfix-kbd')!=='hidden';
+function applyKbd(){$('kbd-hint').classList.toggle('visible',kbdVisible);}
+document.addEventListener('keydown',e=>{
+  const typing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
+  const modal=document.querySelector('.modal-overlay.open');
+  if(e.key==='?'&&!typing){kbdVisible=!kbdVisible;localStorage.setItem('lightfix-kbd',kbdVisible?'shown':'hidden');applyKbd();return;}
+  if(modal||typing)return;
+  switch(e.key){
+    case'n':case'N': e.preventDefault();startAdd();break;
+    case'r':case'R': e.preventDefault();setLoading(true);fetchEntries().then(()=>setLoading(false));break;
+    case't':case'T': toggleTheme();break;
+    case'v':case'V': toggleView();break;
+    case'/': e.preventDefault();showView('home');document.querySelector('.btn-nav-tab[data-tab="issues"]').click();setTimeout(()=>$('search-input').focus(),50);break;
+    case'Escape':{
+      const a=document.querySelector('.view.active');if(!a)break;
+      if(a.id==='view-detail')showView('home');
+      else if(a.id==='view-edit')showDetail(currentDetailId);
+      else if(a.id==='view-add')showView('home');
+    }break;
+  }
+});
+
+// ════════════════════════════════
+// NAV
+// ════════════════════════════════
+$('logo-btn').addEventListener('click',()=>{
+  $('search-input').value=''; activeSort='newest'; activeMfr=activeLoc=activeEquip='';
+  $('sort-select').value='newest';
+  ['filter-mfr','filter-loc','filter-equip'].forEach(id=>$(id).value='');
+  updateClearBtn();
+  document.querySelectorAll('.btn-nav-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.btn-nav-tab[data-tab="issues"]').classList.add('active');
+  $('tab-issues').style.display='block'; $('tab-databases').style.display='none';
+  refreshIssues(); showView('home');
+});
+$('refresh-btn').addEventListener('click',async()=>{setLoading(true);await fetchEntries();setLoading(false);});
+
+// Wire date masks
+maskDate($('add-date')); maskDate($('edit-date'));
+
+// ════════════════════════════════
+// INIT
+// ════════════════════════════════
+async function init(){
+  loadCDB(); updateConnectionUI(); initCombos(); wireDbButtons(); renderDBs();
+  applyTheme(); applyKbd(); applyView();
+  showView('home');
+  if(scriptUrl){ setLoading(true); await fetchEntries(); setLoading(false); }
+  else { renderGrid([]); $('list-title').textContent='All Issues (0)'; }
+}
+init();
+</script>
+</body>
+</html>
