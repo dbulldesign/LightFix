@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1057,9 +1060,9 @@ body.is-mobile .pin-key { font-size: 20px; }
       <div class="admin-section">
         <div class="admin-section-title" style="display:flex;justify-content:space-between;align-items:center;">
           <span>🔥 Firebase Sync</span>
-          <div style="display:flex;gap:8px;" id="gs-action-btns"></div>
+          <div style="display:flex;gap:8px;" id="fb-action-btns"></div>
         </div>
-        <div id="gs-status-block" style="font-size:13px;color:var(--text2);margin-top:4px;"></div>
+        <div id="fb-status-block" style="font-size:13px;color:var(--text2);margin-top:4px;"></div>
       </div>
       <div class="divider"></div>
       <!-- User Management -->
@@ -2752,11 +2755,11 @@ function disconnectFromSetup() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  GOOGLE SHEETS STATUS (admin panel)
+//  FIREBASE STATUS (admin panel)
 // ═══════════════════════════════════════════════════════
 function renderGsStatus() {
-  const btns  = document.getElementById('gs-action-btns');
-  const block = document.getElementById('gs-status-block');
+  const btns  = document.getElementById('fb-action-btns');
+  const block = document.getElementById('fb-status-block');
   if (!btns || !block) return;
   const connected = !!(fbConfig && fbDb);
   if (connected) {
